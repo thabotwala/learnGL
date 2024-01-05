@@ -1,12 +1,17 @@
+#include "../include/memory_stats.h"
 #include <cstdlib>
+#include <cmath>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/common.hpp>
 #include <glm/detail/qualifier.hpp>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/quaternion_geometric.hpp>
 #include <glm/ext/quaternion_transform.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/ext/vector_float4.hpp>
+#include <glm/geometric.hpp>
 #include <glm/trigonometric.hpp>
 #include <iostream>
 #include <fstream>
@@ -16,12 +21,24 @@
 #include "../include/shader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../include/stb_image.h"
-void process(GLFWwindow *window, float &mapx, float &mapy);
+void process(GLFWwindow *window);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void updateFPS(GLFWwindow* window, int target);
-
+std::ostream& operator<<(std::ostream& stream, const glm::vec3 &v);
 double previousTime = 0.0;
 int frameCount = 0;
+
+  glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, -3.0f);
+  glm::vec3 cameraTarget = glm::vec3(0.0f,0.0f, 0.0f);
+  glm::vec3 cameraDirection = glm::normalize((cameraTarget - cameraPos));
+  glm::vec3 worldUpAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+  glm::vec3 cameraXAxis = glm::normalize(glm::cross(worldUpAxis, cameraDirection));
+  glm::vec3 cameraYAxis = glm::normalize(glm::cross(cameraDirection, cameraXAxis));
+  glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+  float cameraSpeed;
+  glm::mat4 view;
+float frameTime = 0.0f;
+float lastFrame = 0.0f;
 int main(){
     //init glfw
     glfwInit();
@@ -174,9 +191,16 @@ glm::vec3( 1.5f, 2.0f, -2.5f),
 glm::vec3( 1.5f, 0.2f, -1.5f),
 glm::vec3(-1.3f, 1.0f, -1.5f)
 };
+  long long mem = memory_used() / 1024;
+  std::cout << "Memory Used: " << mem << " kilo bytes" << std::endl;
+  std::cout << cameraDirection << "\n" << cameraXAxis << "\n" << cameraYAxis << std::endl;
   while(!glfwWindowShouldClose(window)){
         //input
-        process(window,mapx, mapy);
+        float currentFrame =  (float)glfwGetTime();
+        frameTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+        cameraSpeed = 2.0f * frameTime;
+        process(window);
         //render
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -223,13 +247,11 @@ glm::vec3(-1.3f, 1.0f, -1.5f)
 
         }
         //view
-        glm::mat4 view = glm::mat4(1.0f);
-        view = glm::translate(view, glm::vec3(0.0f, 1.0f, -3.0f));
-        glm::vec3 rot = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-        view = glm::rotate(view, (float)fabs(sin((float)glfwGetTime()*0.2f)), rot);
+
+//        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraYAxis);
         // projection matrix
         glm::mat4 projection = glm::mat4(1.0f);
-        projection = glm::perspective(glm::radians(75.0f), (float)(width/(float)height), 0.1f, 100.0f);
+        projection = glm::perspective(glm::radians(60.0f), (float)(width/(float)height), 0.1f, 100.0f);
       
         // mode loc
 
@@ -255,6 +277,7 @@ glm::vec3(-1.3f, 1.0f, -1.5f)
         transLoc = glGetUniformLocation(shaders.ID, "transform");
         glUniformMatrix4fv(transLoc,1, GL_FALSE, &trans[0][0]);/
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);*/
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -268,7 +291,7 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height){
     glViewport(0, 0, width, height);
 }
 
-void process(GLFWwindow *window, float &mapx, float &mapy){
+void process(GLFWwindow *window){
 	bool wireframe = false;
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
         glfwSetWindowShouldClose(window, true);
@@ -280,31 +303,21 @@ void process(GLFWwindow *window, float &mapx, float &mapy){
     if(glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS){
     	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
-  if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
-    mapy += 0.1f;
-    std::cout << mapy << "\n";
 
+  //ganlde camera input keys
+  if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
+    cameraPos += cameraSpeed * cameraFront;
   }
-  else if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
-    mapy -= 0.1f;
-    std::cout << mapy << "\n";
-
-    /*if(mapy < 0.0f)
-    {
-      mapy = 0.0f;
-    }*/
+  else if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+    cameraPos -= cameraSpeed * cameraFront;
   }
-  if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
-    mapx -= 0.1f;
-    std::cout << mapx << "\n";
-    /*if(mapx < 0.0f){
-      mapx = 0.0f;
-    }*/
+  if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
+    cameraPos -= glm::normalize(glm::cross(cameraFront, cameraYAxis)) * cameraSpeed;
   }
-  else if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
-    mapx += 0.1f;
-    std::cout << mapx << "\n";
+  else if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
+    cameraPos += glm::normalize(glm::cross(cameraFront, cameraYAxis)) * cameraSpeed; 
   }
+    view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraYAxis);
 }
 void updateFPS(GLFWwindow* window, int target){
   double currentTime = glfwGetTime();
@@ -325,3 +338,7 @@ void updateFPS(GLFWwindow* window, int target){
 
 }
 
+std::ostream& operator<<(std::ostream& stream, const glm::vec3 &v){
+  stream << v.x << ", " << v.y << ", " << v.z;
+  return stream;
+}
