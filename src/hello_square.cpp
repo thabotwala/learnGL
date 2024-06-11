@@ -66,26 +66,36 @@ int main(){
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
     //deinfe vertices
-    float vertices[] = {0.5, 0.5, 0.0,
+/*    float vertices[] = {0.5, 0.5, 0.0,
                         0.5,-0.5,0.0,
                         -0.5,-0.5,0.0,
-                        -0.5,0.5,0.0};
+                        -0.5,0.5,0.0};*/
+    float tri_one[] = { // verts for triangle 1
+			-0.9,0.0,0.0,
+			-0.1,0.0,0.0,
+			-0.1,0.5,0.0,
+			0.9,0.0,0.0,
+			0.1,0.0,0.0,
+			0.1,0.5,0.0};
+    		      
     //define indices
     unsigned int indices[] = {0,1, 3,
                               1,2,3};
 
     //creaet buffers objects
-    unsigned int VBO, VAO,EBO;
+    unsigned int VBO1,VBO2, VAO,EBO;
     glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
+    glGenBuffers(1, &VBO1);
+    glGenBuffers(1, &VBO2);
     glGenBuffers(1, &EBO);
 
     //bind buffers
     glBindVertexArray(VAO);
 
     //bind vbo
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO1);
+    //binding verts to the buffer
+    glBufferData(GL_ARRAY_BUFFER, sizeof(tri_one), &tri_one, GL_STATIC_DRAW);
     //bind ebo
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), &indices, GL_STATIC_DRAW);
@@ -107,8 +117,9 @@ int main(){
         
         glUseProgram(shaderProgram);
         glBindVertexArray(VAO);
-        //glDrawArrays(GL_TRIANGLES, 0, 6);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+ //       glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glDrawArrays(GL_TRIANGLES, 3, 3);
  
         glfwSwapBuffers(window);
         glfwPollEvents();
