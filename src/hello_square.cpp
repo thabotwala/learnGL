@@ -66,9 +66,9 @@ int main(){
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
     //deinfe vertices
-    float vertices[] = {-0.5, -0.5, 0.0,
+    float vertices[] = {0.5, 0.5, 0.0,
                         0.5,-0.5,0.0,
-                        0.5,0.5,0.0,
+                        -0.5,-0.5,0.0,
                         -0.5,0.5,0.0};
     //define indices
     unsigned int indices[] = {0,1, 3,
@@ -107,8 +107,8 @@ int main(){
         
         glUseProgram(shaderProgram);
         glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        //glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
  
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -124,7 +124,15 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height){
 }
 
 void process(GLFWwindow *window){
+	bool wireframe = false;
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
         glfwSetWindowShouldClose(window, true);
     }
+    if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS){
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);   
+    }
+    if(glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS){
+    	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
 }
