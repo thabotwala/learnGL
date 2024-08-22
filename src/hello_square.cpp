@@ -29,27 +29,16 @@ int main(){
     }
     Shader shaders("shaders/vertex.glsl", "shaders/fragment.glsl");
     //define vertices
-/*    float vertices[] = {0.5, 0.5, 0.0,
-                        0.5,-0.5,0.0,
-                        -0.5,-0.5,0.0,
-                        -0.5,0.5,0.0};*/
     float tri_one[] = { // verts for triangle 1
 			// verts pos  	 //colours	 //tex coords
 			0.5f,0.5f,0.0f,     /*1.0f,0.0f,0.0f,*/ 1.0f,1.0f, //top right
 			0.5f,-0.5f,0.0f,    /*0.0f,1.0f,0.0f,*/ 1.0f,0.0f, // bottom right
 			-0.5f,-0.5f,0.0f,   /*0.0f,0.0f,1.0f,*/ 0.0f,0.0f, //bottom left
 			-0.5f,0.5f,0.0f,    /*1.0f,1.0f,0.0f,*/ 0.0f,1.0f // top left
-    };
-   /* float tri_two[] = { // verts for tri 2
-			0.9,0.0,0.0,
-			0.1,0.0,0.0,
-			0.1,0.5,0.0};
-   */
-    		      
+    };    		      
     //define indices
     unsigned int indices[] = {0,1, 3,
                               1,2,3};
-
     //creaet buffers objects
     unsigned int VBO1,VBO2,VAO1, VAO2,EBO;
     glGenVertexArrays(1, &VAO1);
@@ -80,16 +69,8 @@ int main(){
 
     glBindVertexArray(0);
     //----------------------------------
-/*    glBindVertexArray(VAO2);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(tri_two), &tri_two, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);*/
     glEnableVertexAttribArray(0);
     //render loop
-    //some vertex checking stuff
-    int nrAttrib = 0;
-    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttrib);
-    std::cout << nrAttrib << std::endl;
     //load/create texture 
     int texWidth, texHeight, nrChannels;
     unsigned int texture;
@@ -109,24 +90,18 @@ int main(){
     }
 	else{ std::cerr << "Failed to load texture\n"; return -1; }
 	stbi_image_free(data);
-//        shaders.use();
-	//glUniform1i(glGetUniformLocation(shaders.ID, "texture"), 0);
-    	while(!glfwWindowShouldClose(window)){
+  shaders.use();
+	glUniform1i(glGetUniformLocation(shaders.ID, "texture"), 0);
+  while(!glfwWindowShouldClose(window)){
         //input
         process(window);
         //render
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-//        glActiveTexture(GL_TEXTURE0);
-
+        glActiveTexture(GL_TEXTURE0);
       	glBindTexture(GL_TEXTURE_2D, texture);
-        shaders.use();
         glBindVertexArray(VAO1);
-//        glDrawArrays(GL_TRIANGLES, 0, 3);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        
-//	    glBindVertexArray(VAO2);
-//	    glDrawArrays(GL_TRIANGLES, 0, 3);
  
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -152,5 +127,4 @@ void process(GLFWwindow *window){
     if(glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS){
     	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
-
 }
