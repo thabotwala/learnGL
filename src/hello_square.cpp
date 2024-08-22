@@ -71,6 +71,7 @@ int main(){
     //----------------------------------
     glEnableVertexAttribArray(0);
     //render loop
+    stbi_set_flip_vertically_on_load(true);
     //load/create texture 
     int texWidth, texHeight, nrChannels;
     unsigned int texture;
@@ -89,9 +90,23 @@ int main(){
 	    glGenerateMipmap(GL_TEXTURE_2D);
     }
 	else{ std::cerr << "Failed to load texture\n"; return -1; }
+  unsigned int texture2;
+  data = stbi_load("flare.jpg", &texWidth, &texHeight, &nrChannels, 0);
+  glGenTextures(1,&texture2);
+  glBindTexture(GL_TEXTURE_2D, texture2);
+    //set texture warp/filter
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  if(data){
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
 	stbi_image_free(data);
   shaders.use();
 	glUniform1i(glGetUniformLocation(shaders.ID, "texture"), 0);
+  shaders.setInt("texture2",1);
   while(!glfwWindowShouldClose(window)){
         //input
         process(window);
@@ -100,6 +115,8 @@ int main(){
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glActiveTexture(GL_TEXTURE0);
       	glBindTexture(GL_TEXTURE_2D, texture);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture2);
         glBindVertexArray(VAO1);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
  
