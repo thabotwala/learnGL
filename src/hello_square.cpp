@@ -1,11 +1,17 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/vector_float4.hpp>
+#include <glm/trigonometric.hpp>
 #include <iostream>
 #include <fstream>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "../include/shader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../include/stb_image.h"
-void process(GLFWwindow *window);
+void process(GLFWwindow *window, float &mapx, float &mapy);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 
 int main(){
@@ -29,12 +35,13 @@ int main(){
     }
     Shader shaders("shaders/vertex.glsl", "shaders/fragment.glsl");
     //define vertices
+    float mapx = 1.0f, mapy = 1.0f;
     float tri_one[] = { // verts for triangle 1
 			// verts pos  	 //colours	 //tex coords
 			0.5f,0.5f,0.0f,     /*1.0f,0.0f,0.0f,*/ 1.0f,1.0f, //top right
 			0.5f,-0.5f,0.0f,    /*0.0f,1.0f,0.0f,*/ 1.0f,0.0f, // bottom right
 			-0.5f,-0.5f,0.0f,   /*0.0f,0.0f,1.0f,*/ 0.0f,0.0f, //bottom left
-			-0.5f,0.5f,0.0f,    /*1.0f,1.0f,0.0f,*/ 0.0f,1.0f // top left
+			-0.5f,0.5f,0.0f,    /*1.0f,1.0f,0.0f,*/ 0.0f,1.0f// top left
     };    		      
     //define indices
     unsigned int indices[] = {0,1, 3,
@@ -80,8 +87,8 @@ int main(){
     //set texture warp/filter
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);//GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     unsigned char* data = stbi_load("textures/container.jpg", &texWidth, &texHeight, &nrChannels, 0);
     if(data){
 	    //generate texture
@@ -107,17 +114,34 @@ int main(){
   shaders.use();
 	glUniform1i(glGetUniformLocation(shaders.ID, "texture"), 0);
   shaders.setInt("texture2",1);
+  //transformations
+  glm::vec4 vec(1.0f,0.0f,0.0f,1.0f);
+  glm::mat4 trans = glm::mat4(1.0f);
+  trans = glm::translate(trans, glm::vec3(0.25f,0.50f,0.0f));
+  vec = trans * vec;
+  std::cout << vec.x << ", " << vec.y << ", " << vec.z << std::endl;
+  trans = glm::rotate(trans, glm::radians(45.0f), glm::vec3(0.0f,1.0f,0.0f));
+  trans = glm::scale(trans, glm::vec3(0.5f,1.0f,2.0f));
+  //sedn translation matrix to the shader
+  unsigned int transLoc = glGetUniformLocation(shaders.ID, "transform");
+  glUniformMatrix4fv(transLoc,1, GL_FALSE, glm::value_ptr(trans));
   while(!glfwWindowShouldClose(window)){
         //input
-        process(window);
+        process(window,mapx, mapy);
         //render
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+        shaders.setFloat("mapx",mapx);
+        shaders.setFloat("mapy",mapy);
+
         glActiveTexture(GL_TEXTURE0);
       	glBindTexture(GL_TEXTURE_2D, texture);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
         glBindVertexArray(VAO1);
+
+//        shaders.use();
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
  
         glfwSwapBuffers(window);
@@ -133,7 +157,7 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height){
     glViewport(0, 0, width, height);
 }
 
-void process(GLFWwindow *window){
+void process(GLFWwindow *window, float &mapx, float &mapy){
 	bool wireframe = false;
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
         glfwSetWindowShouldClose(window, true);
@@ -144,4 +168,23 @@ void process(GLFWwindow *window){
     if(glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS){
     	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
+  if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
+    mapy += 0.5f;
+  }
+  else if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
+   mapy -= 0.5f;
+    if(mapy < 0.0f)
+    {
+      mapy = 0.0f;
+    }
+  }
+  if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
+    mapx -= 0.50f;
+    if(mapx < 0.0f){
+      mapx = 0.0f;
+    }
+  }
+  else if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
+    mapx += 0.5f;
+  }
 }
