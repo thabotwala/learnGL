@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/vector_float3.hpp>
 #include <glm/ext/vector_float4.hpp>
 #include <glm/trigonometric.hpp>
 #include <iostream>
@@ -96,7 +97,7 @@ int main(){
 	    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 	    glGenerateMipmap(GL_TEXTURE_2D);
     }
-	else{ std::cerr << "Failed to load texture\n"; return -1; }
+  	else{ std::cerr << "Failed to load texture\n"; return -1; }
   unsigned int texture2;
   data = stbi_load("flare.jpg", &texWidth, &texHeight, &nrChannels, 0);
   glGenTextures(1,&texture2);
@@ -119,18 +120,23 @@ int main(){
   glm::mat4 trans = glm::mat4(1.0f);
   trans = glm::translate(trans, glm::vec3(0.25f,0.50f,0.0f));
   vec = trans * vec;
-  std::cout << vec.x << ", " << vec.y << ", " << vec.z << std::endl;
-  trans = glm::rotate(trans, glm::radians(45.0f), glm::vec3(0.0f,1.0f,0.0f));
   trans = glm::scale(trans, glm::vec3(0.5f,1.0f,2.0f));
+
   //sedn translation matrix to the shader
-  unsigned int transLoc = glGetUniformLocation(shaders.ID, "transform");
-  glUniformMatrix4fv(transLoc,1, GL_FALSE, glm::value_ptr(trans));
   while(!glfwWindowShouldClose(window)){
         //input
         process(window,mapx, mapy);
         //render
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+        //rotate
+        trans = glm::rotate(trans, (float)glfwGetTime()/60.0f, glm::vec3(0.0f,0.0f,1.0f));
+
+        unsigned int transLoc = glGetUniformLocation(shaders.ID, "transform");
+        glUniformMatrix4fv(transLoc,1, GL_FALSE, glm::value_ptr(trans));
+
+
 
         shaders.setFloat("mapx",mapx);
         shaders.setFloat("mapy",mapy);
@@ -143,7 +149,6 @@ int main(){
 
 //        shaders.use();
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
- 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

@@ -139,7 +139,7 @@ int main(){
 	//
 	glUseProgram(shaderProgram);
 	glBindVertexArray(vao);
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
 	//processEvents
 	glfwSwapBuffers(window);
 	glfwPollEvents();
