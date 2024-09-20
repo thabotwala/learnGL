@@ -22,6 +22,7 @@ int main(){
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    int width = 800, height = 600;
     //vreate window
     GLFWwindow *window = glfwCreateWindow(800, 600, "A window title", NULL, NULL);
     if(window == NULL){
@@ -132,12 +133,7 @@ int main(){
         glBindTexture(GL_TEXTURE_2D, texture2);
         glBindVertexArray(VAO1);
 
-        //rotate
-        glm::mat4 trans = glm::mat4(1.0f);
-        trans = glm::translate(trans, glm::vec3(0.50f,0.50f,0.0f));
-        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f,0.0f,1.0f));
-        unsigned int transLoc = glGetUniformLocation(shaders.ID, "transform");
-        glUniformMatrix4fv(transLoc,1, GL_FALSE, glm::value_ptr(trans));
+
 
      
 
@@ -148,18 +144,47 @@ int main(){
   //      shaders.setFloat("mapy",mapy);
 
 
+        glm::mat4 trans = glm::mat4(1.0f);
+        trans = glm::translate(trans, glm::vec3(mapx, mapy, 0.0f));
+        trans = glm::scale(trans, glm::vec3(1.0f,1.0f,0.0f));
+
+        //A model matrix
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        
+        //view
+        glm::mat4 view = glm::mat4(1.0f);
+        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        // projection matrix
+        glm::mat4 projection = glm::mat4(1.0f);
+        projection = glm::perspective(glm::radians(45.0f), (float)(width/height), 0.1f, 100.0f);
+        
+        unsigned int transLoc = glGetUniformLocation(shaders.ID, "transformMatrix");
+        glUniformMatrix4fv(transLoc,1, GL_FALSE, &trans[0][0]);
+        // mode loc
+        int modelLoc = glGetUniformLocation(shaders.ID, "modelMatrix");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
+        //view loc
+        int viewLoc = glGetUniformLocation(shaders.ID, "viewMatrix");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
+        //perspective lov
+        int projectionLoc = glGetUniformLocation(shaders.ID, "projectionMatrix");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, &projection[0][0]);
+
+
+
+
 
 //        shaders.use();
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         //rotate
-        trans = glm::mat4(1.0f);
+/*        trans = glm::mat4(1.0f);
         trans = glm::translate(trans, glm::vec3(mapx, mapy, 0.0f));
         trans = glm::scale(trans, glm::vec3(1.0f,1.0f,0.0f));
 
         transLoc = glGetUniformLocation(shaders.ID, "transform");
-        glUniformMatrix4fv(transLoc,1, GL_FALSE, &trans[0][0]);
-
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glUniformMatrix4fv(transLoc,1, GL_FALSE, &trans[0][0]);/
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);*/
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
