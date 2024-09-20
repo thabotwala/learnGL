@@ -1,7 +1,10 @@
+#include <cstdlib>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glm/detail/qualifier.hpp>
 #include <glm/ext/matrix_float4x4.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/quaternion_transform.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/ext/vector_float4.hpp>
 #include <glm/trigonometric.hpp>
@@ -15,21 +18,28 @@
 #include "../include/stb_image.h"
 void process(GLFWwindow *window, float &mapx, float &mapy);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void updateFPS(GLFWwindow* window, int target);
 
+double previousTime = 0.0;
+int frameCount = 0;
 int main(){
     //init glfw
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    int width = 800, height = 600;
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+//    glfwWindowHint(GLFW_DECORATED, GL_FALSE);
+  
+    int width = 1920, height = 1080;
     //vreate window
-    GLFWwindow *window = glfwCreateWindow(800, 600, "A window title", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(width, height, "A window title", NULL, NULL);
     if(window == NULL){
         std::cerr << "Failed to create window object\n\r";
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwMaximizeWindow(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     // load glad
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
@@ -39,16 +49,47 @@ int main(){
     Shader shaders("shaders/vertex.glsl", "shaders/fragment.glsl");
     //define vertices
     float mapx = 0.0f, mapy = 0.0f;
-    float tri_one[] = { // verts for triangle 1
-			// verts pos  	 //colours	 //tex coords
-			0.5f,0.5f,0.0f,     /*1.0f,0.0f,0.0f,*/ 1.0f,1.0f, //top right
-			0.5f,-0.5f,0.0f,    /*0.0f,1.0f,0.0f,*/ 1.0f,0.0f, // bottom right
-			-0.5f,-0.5f,0.0f,   /*0.0f,0.0f,1.0f,*/ 0.0f,0.0f, //bottom left
-			-0.5f,0.5f,0.0f,    /*1.0f,1.0f,0.0f,*/ 0.0f,1.0f// top left
-    };    		      
+    //float tri_one[] = { // verts for triangle 1
+			  // verts pos  	 //colours	 //tex coords
+//			0.5f,0.5f,0.0f,     /*1.0f,0.0f,0.0f,*/ 1.0f,1.0f, //top right
+//			0.5f,-0.5f,0.0f,    /*0.0f,1.0f,0.0f,*/ 1.0f,0.0f, // bottom right
+//			-0.5f,-0.5f,0.0f,   /*0.0f,0.0f,1.0f,*/ 0.0f,0.0f, //bottom left
+//			-0.5f,0.5f,0.0f,    /*1.0f,1.0f,0.0f,*/ 0.0f,1.0f// top left
+//    };
+
+    float cube[] = {
+    //front face
+    -0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
+    0.5f, 0.5f, 0.5f, 0.0f, 0.0f,
+    0.5f, 0.0f, 0.5f, 0.0f, 0.0f,
+    -0.5f, 0.0f, 0.5f, 0.0f, 0.0f,
+    //back face
+     -0.5f, 0.5f, -0.5f, 0.0f, 0.0f,
+    0.5f, 0.5f, -0.5f, 0.0f, 0.0f,
+    0.5f, 0.0f, -0.5f, 0.0f, 0.0f,
+    -0.5f, 0.0f, -0.5f, 0.0f, 0.0f,   
+};
     //define indices
-    unsigned int indices[] = {0,1, 3,
-                              1,2,3};
+    unsigned int indices[] = {
+    //front face
+    0,1,2,
+    0,2,3,
+    //back face
+    4,5,6,
+    4,6,7,
+    //Top face
+    4,5,1,
+    4,1,0,
+    //bottom face
+    7,6,2,
+    7,2,3,
+    //left dace
+    1,5,6,
+    1,6,2,
+    //right face
+    0,4,7,
+    0,7,3
+  };
     //creaet buffers objects
     unsigned int VBO1,VBO2,VAO1, VAO2,EBO;
     glGenVertexArrays(1, &VAO1);
@@ -63,7 +104,7 @@ int main(){
     //bind vbo
     glBindBuffer(GL_ARRAY_BUFFER, VBO1);
     //binding verts to the buffer
-    glBufferData(GL_ARRAY_BUFFER, sizeof(tri_one), &tri_one, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cube), &cube, GL_STATIC_DRAW);
     //bind ebo
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), &indices, GL_STATIC_DRAW);
@@ -120,12 +161,26 @@ int main(){
   //transformations
 
   //sedn translation matrix to the shader
+glm::vec3 cubePositions[] = {
+glm::vec3( 0.0f, 0.0f,
+0.0f),
+glm::vec3( 2.0f, 5.0f, -15.0f),
+glm::vec3(-1.5f, -2.2f, -2.5f),
+glm::vec3(-3.8f, -2.0f, -12.3f),
+glm::vec3( 2.4f, -0.4f, -3.5f),
+glm::vec3(-1.7f, 3.0f, -7.5f),
+glm::vec3( 1.3f, -2.0f, -2.5f),
+glm::vec3( 1.5f, 2.0f, -2.5f),
+glm::vec3( 1.5f, 0.2f, -1.5f),
+glm::vec3(-1.3f, 1.0f, -1.5f)
+};
   while(!glfwWindowShouldClose(window)){
         //input
         process(window,mapx, mapy);
         //render
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        
 
         glActiveTexture(GL_TEXTURE0);
       	glBindTexture(GL_TEXTURE_2D, texture);
@@ -144,26 +199,40 @@ int main(){
   //      shaders.setFloat("mapy",mapy);
 
 
-        glm::mat4 trans = glm::mat4(1.0f);
-        trans = glm::translate(trans, glm::vec3(mapx, mapy, 0.0f));
-        trans = glm::scale(trans, glm::vec3(1.0f,1.0f,0.0f));
+
 
         //A model matrix
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        
+       for(unsigned int i = 0; i < 10; i++)
+        {
+          glm::mat4 model = glm::mat4(1.0f);
+          model = glm::translate(model, cubePositions[i]);
+          if(i % 3 == 0 && i % 2 == 0 && i != 0){
+            model = glm::rotate(model, (float)glfwGetTime()*5.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+          }
+           else if(i % 3 == 0 && i != 0){
+            model = glm::rotate(model, (float)glfwGetTime()*2.5f, glm::vec3(1.0f,0.3f,0.1f));
+
+          }
+          else{
+            float angle = 20.0f * i;
+            model = glm::rotate(model, angle, glm::vec3(1.0f,0.3f,0.1f));
+          }
+          int modelLoc = glGetUniformLocation(shaders.ID, "modelMatrix");
+          glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
+          glDrawElements(GL_TRIANGLES,36, GL_UNSIGNED_INT, 0);
+
+        }
         //view
         glm::mat4 view = glm::mat4(1.0f);
-        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        view = glm::translate(view, glm::vec3(0.0f, 1.0f, -3.0f));
+        glm::vec3 rot = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+        view = glm::rotate(view, (float)fabs(sin((float)glfwGetTime()*0.2f)), rot);
         // projection matrix
         glm::mat4 projection = glm::mat4(1.0f);
-        projection = glm::perspective(glm::radians(45.0f), (float)(width/height), 0.1f, 100.0f);
-        
-        unsigned int transLoc = glGetUniformLocation(shaders.ID, "transformMatrix");
-        glUniformMatrix4fv(transLoc,1, GL_FALSE, &trans[0][0]);
+        projection = glm::perspective(glm::radians(75.0f), (float)(width/(float)height), 0.1f, 100.0f);
+      
         // mode loc
-        int modelLoc = glGetUniformLocation(shaders.ID, "modelMatrix");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
+
         //view loc
         int viewLoc = glGetUniformLocation(shaders.ID, "viewMatrix");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &view[0][0]);
@@ -172,11 +241,12 @@ int main(){
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, &projection[0][0]);
 
 
-
-
-
+        glBindVertexArray(VAO1);
+//        glDrawArrays(GL_TRIANGLES,0,36);
 //        shaders.use();
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        glfwSwapInterval(1.0/144.0);
+        updateFPS(window,0);
         //rotate
 /*        trans = glm::mat4(1.0f);
         trans = glm::translate(trans, glm::vec3(mapx, mapy, 0.0f));
@@ -204,7 +274,8 @@ void process(GLFWwindow *window, float &mapx, float &mapy){
         glfwSetWindowShouldClose(window, true);
     }
     if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS){
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);   
+    glLineWidth(3.0f);
+  	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);   
     }
     if(glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS){
     	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -235,3 +306,22 @@ void process(GLFWwindow *window, float &mapx, float &mapy){
     std::cout << mapx << "\n";
   }
 }
+void updateFPS(GLFWwindow* window, int target){
+  double currentTime = glfwGetTime();
+  double deltaTime = currentTime - previousTime;
+  frameCount++;
+  double targetDeltaTime = 1.0/(double)target;
+  if(targetDeltaTime < deltaTime){
+    double sleepTime = targetDeltaTime - deltaTime;
+    glfwWaitEventsTimeout(targetDeltaTime);
+
+  }
+  if(deltaTime >= 1.0){
+    const char *ftitle = (std::string("FPS: ")+std::to_string(frameCount)).c_str();
+    glfwSetWindowTitle(window, ftitle);
+    frameCount = 0;
+    previousTime = currentTime;
+  }
+
+}
+
