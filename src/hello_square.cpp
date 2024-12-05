@@ -48,7 +48,7 @@ int main(){
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 //    glfwWindowHint(GLFW_DECORATED, GL_FALSE);
   
-    int width = 1920, height = 1080;
+    int width = 800, height = 600;
     //vreate window
     GLFWwindow *window = glfwCreateWindow(width, height, "A window title", NULL, NULL);
     if(window == NULL){
