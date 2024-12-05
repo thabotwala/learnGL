@@ -21,13 +21,22 @@
 #include "../include/shader.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../include/stb_image.h"
+
+
+//Screen Width
+const int width = 800, height = 600;
+bool firstMouse = true;
+  float lastX = width / 2.0f;
+  float lastY = height / 2.0f;
+
 void process(GLFWwindow *window);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void updateFPS(GLFWwindow* window, int target);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 std::ostream& operator<<(std::ostream& stream, const glm::vec3 &v);
 double previousTime = 0.0;
 int frameCount = 0;
-
+// Vectors ------------------------------------------------------------------------
   glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, -3.0f);
   glm::vec3 cameraTarget = glm::vec3(0.0f,0.0f, 0.0f);
   glm::vec3 cameraDirection = glm::normalize((cameraTarget - cameraPos));
@@ -39,6 +48,9 @@ int frameCount = 0;
   glm::mat4 view;
 float frameTime = 0.0f;
 float lastFrame = 0.0f;
+double yaw = -90.0, pitch;
+//----------------------------------------------------------------------------------------------------
+
 int main(){
     //init glfw
     glfwInit();
@@ -47,8 +59,7 @@ int main(){
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 //    glfwWindowHint(GLFW_DECORATED, GL_FALSE);
-  
-    int width = 800, height = 600;
+
     //vreate window
     GLFWwindow *window = glfwCreateWindow(width, height, "A window title", NULL, NULL);
     if(window == NULL){
@@ -57,7 +68,10 @@ int main(){
     }
     glfwMakeContextCurrent(window);
     glfwMaximizeWindow(window);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
+
     // load glad
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
         std::cerr << "Could not Load GLAD\n\r";
@@ -194,12 +208,14 @@ glm::vec3(-1.3f, 1.0f, -1.5f)
   long long mem = memory_used() / 1024;
   std::cout << "Memory Used: " << mem << " kilo bytes" << std::endl;
   std::cout << cameraDirection << "\n" << cameraXAxis << "\n" << cameraYAxis << std::endl;
+ 
+
   while(!glfwWindowShouldClose(window)){
         //input
         float currentFrame =  (float)glfwGetTime();
         frameTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-        cameraSpeed = 2.0f * frameTime;
+        cameraSpeed = 4.0f * frameTime;
         process(window);
         //render
         glClear(GL_COLOR_BUFFER_BIT);
@@ -341,4 +357,32 @@ void updateFPS(GLFWwindow* window, int target){
 std::ostream& operator<<(std::ostream& stream, const glm::vec3 &v){
   stream << v.x << ", " << v.y << ", " << v.z;
   return stream;
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+if (firstMouse)
+{
+lastX = xpos;
+lastY = ypos;
+firstMouse = false;
+}
+float xoffset = xpos - lastX;
+float yoffset = lastY - ypos;
+lastX = xpos;
+lastY = ypos;
+float sensitivity = 0.1f;
+xoffset *= sensitivity;
+yoffset *= sensitivity;
+yaw += xoffset;
+pitch += yoffset;
+if(pitch > 89.0f)
+pitch = 89.0f;
+if(pitch < -89.0f)
+pitch = -89.0f;
+glm::vec3 direction;
+direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+direction.y = sin(glm::radians(pitch));
+direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+cameraFront = glm::normalize(direction);
 }
