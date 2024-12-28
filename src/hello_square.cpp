@@ -28,16 +28,18 @@ const int width = 800, height = 600;
 bool firstMouse = true;
   float lastX = width / 2.0f;
   float lastY = height / 2.0f;
-
+  float fov = 45.f;
+  float zoom = 1.0f;
 void process(GLFWwindow *window);
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void updateFPS(GLFWwindow* window, int target);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 std::ostream& operator<<(std::ostream& stream, const glm::vec3 &v);
 double previousTime = 0.0;
 int frameCount = 0;
 // Vectors ------------------------------------------------------------------------
-  glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, -3.0f);
+  glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
   glm::vec3 cameraTarget = glm::vec3(0.0f,0.0f, 0.0f);
   glm::vec3 cameraDirection = glm::normalize((cameraTarget - cameraPos));
   glm::vec3 worldUpAxis = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -46,6 +48,7 @@ int frameCount = 0;
   glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
   float cameraSpeed;
   glm::mat4 view;
+  glm::mat4 projection;
 float frameTime = 0.0f;
 float lastFrame = 0.0f;
 double yaw = -90.0, pitch;
@@ -71,7 +74,7 @@ int main(){
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
-
+    glfwSetScrollCallback(window, scroll_callback);
     // load glad
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
         std::cerr << "Could not Load GLAD\n\r";
@@ -165,23 +168,24 @@ int main(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);//GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     unsigned char* data = stbi_load("textures/container.jpg", &texWidth, &texHeight, &nrChannels, 0);
-    if(data){
-	    //generate texture
-      std::cout << texWidth << ", " << texHeight << "\n";
-	    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	    glGenerateMipmap(GL_TEXTURE_2D);
-    }
-  	else{ std::cerr << "Failed to load texture\n"; return -1; }
+  if(data){
+	  //generate texture
+    std::cout <<"Texture 1 : Width = " << texWidth << ", Height = " << texHeight << "\n";
+	  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	  glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  else{ std::cerr << "Failed to load texture\n"; return -1; }
   unsigned int texture2;
   data = stbi_load("flare.jpg", &texWidth, &texHeight, &nrChannels, 0);
   glGenTextures(1,&texture2);
   glBindTexture(GL_TEXTURE_2D, texture2);
     //set texture warp/filter
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  if(data){
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  if(data)
+  {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texWidth, texHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
   }
@@ -192,19 +196,18 @@ int main(){
   //transformations
 
   //sedn translation matrix to the shader
-glm::vec3 cubePositions[] = {
-glm::vec3( 0.0f, 0.0f,
-0.0f),
-glm::vec3( 2.0f, 5.0f, -15.0f),
-glm::vec3(-1.5f, -2.2f, -2.5f),
-glm::vec3(-3.8f, -2.0f, -12.3f),
-glm::vec3( 2.4f, -0.4f, -3.5f),
-glm::vec3(-1.7f, 3.0f, -7.5f),
-glm::vec3( 1.3f, -2.0f, -2.5f),
-glm::vec3( 1.5f, 2.0f, -2.5f),
-glm::vec3( 1.5f, 0.2f, -1.5f),
-glm::vec3(-1.3f, 1.0f, -1.5f)
-};
+  glm::vec3 cubePositions[] = {
+    glm::vec3( 0.0f, 0.0f, 0.0f),
+    glm::vec3( 2.0f, 5.0f, -15.0f),
+    glm::vec3(-1.5f, -2.2f, -2.5f),
+    glm::vec3(-3.8f, -2.0f, -12.3f),
+    glm::vec3( 2.4f, -0.4f, -3.5f),
+    glm::vec3(-1.7f, 3.0f, -7.5f),
+    glm::vec3( 1.3f, -2.0f, -2.5f),
+    glm::vec3( 1.5f, 2.0f, -2.5f),
+    glm::vec3( 1.5f, 0.2f, -1.5f),
+    glm::vec3(-1.3f, 1.0f, -1.5f)
+  };
   long long mem = memory_used() / 1024;
   std::cout << "Memory Used: " << mem << " kilo bytes" << std::endl;
   std::cout << cameraDirection << "\n" << cameraXAxis << "\n" << cameraYAxis << std::endl;
@@ -220,29 +223,16 @@ glm::vec3(-1.3f, 1.0f, -1.5f)
         //render
         glClear(GL_COLOR_BUFFER_BIT);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        
 
         glActiveTexture(GL_TEXTURE0);
       	glBindTexture(GL_TEXTURE_2D, texture);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
         glBindVertexArray(VAO1);
-
-
-
-     
-
-
-
-
 //        shaders.setFloat("mapx",mapx);
   //      shaders.setFloat("mapy",mapy);
-
-
-
-
         //A model matrix
-       for(unsigned int i = 0; i < 10; i++)
+       for(unsigned int i = 0; i < 1; i++)
         {
           glm::mat4 model = glm::mat4(1.0f);
           model = glm::translate(model, cubePositions[i]);
@@ -266,10 +256,8 @@ glm::vec3(-1.3f, 1.0f, -1.5f)
 
 //        view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraYAxis);
         // projection matrix
-        glm::mat4 projection = glm::mat4(1.0f);
+        projection = glm::mat4(1.0f);
         projection = glm::perspective(glm::radians(60.0f), (float)(width/(float)height), 0.1f, 100.0f);
-      
-        // mode loc
 
         //view loc
         int viewLoc = glGetUniformLocation(shaders.ID, "viewMatrix");
@@ -278,21 +266,11 @@ glm::vec3(-1.3f, 1.0f, -1.5f)
         int projectionLoc = glGetUniformLocation(shaders.ID, "projectionMatrix");
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, &projection[0][0]);
 
-
         glBindVertexArray(VAO1);
-//        glDrawArrays(GL_TRIANGLES,0,36);
-//        shaders.use();
+
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
         glfwSwapInterval(1.0/144.0);
         updateFPS(window,0);
-        //rotate
-/*        trans = glm::mat4(1.0f);
-        trans = glm::translate(trans, glm::vec3(mapx, mapy, 0.0f));
-        trans = glm::scale(trans, glm::vec3(1.0f,1.0f,0.0f));
-
-        transLoc = glGetUniformLocation(shaders.ID, "transform");
-        glUniformMatrix4fv(transLoc,1, GL_FALSE, &trans[0][0]);/
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);*/
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -361,28 +339,34 @@ std::ostream& operator<<(std::ostream& stream, const glm::vec3 &v){
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-if (firstMouse)
-{
-lastX = xpos;
-lastY = ypos;
-firstMouse = false;
+  if (firstMouse)
+  {
+    lastX = xpos;
+    lastY = ypos;
+    firstMouse = false;
+  }
+  float xoffset = xpos - lastX;
+  float yoffset = lastY - ypos;
+  lastX = xpos;
+  lastY = ypos;
+  float sensitivity = 0.1f;
+  xoffset *= sensitivity;
+  yoffset *= sensitivity;
+  yaw += xoffset;
+  pitch += yoffset;
+  if(pitch > 89.0f)
+    pitch = 89.0f;
+  if(pitch < -89.0f)
+    pitch = -89.0f;
+  glm::vec3 direction;
+  direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+  direction.y = sin(glm::radians(pitch));
+  direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+  cameraFront = glm::normalize(direction);
 }
-float xoffset = xpos - lastX;
-float yoffset = lastY - ypos;
-lastX = xpos;
-lastY = ypos;
-float sensitivity = 0.1f;
-xoffset *= sensitivity;
-yoffset *= sensitivity;
-yaw += xoffset;
-pitch += yoffset;
-if(pitch > 89.0f)
-pitch = 89.0f;
-if(pitch < -89.0f)
-pitch = -89.0f;
-glm::vec3 direction;
-direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-direction.y = sin(glm::radians(pitch));
-direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-cameraFront = glm::normalize(direction);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+  zoom -= static_cast<float>(yoffset);
+  zoom = zoom < 1.0f ? 1.0f : zoom > 45.0f ? 45.0f : zoom;
+  projection = glm::perspective(glm::radians(fov), ((float)width/(float)height), 0.1f, 100.0f);
 }
