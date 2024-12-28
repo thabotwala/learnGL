@@ -229,8 +229,6 @@ int main(){
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
         glBindVertexArray(VAO1);
-//        shaders.setFloat("mapx",mapx);
-  //      shaders.setFloat("mapy",mapy);
         //A model matrix
        for(unsigned int i = 0; i < 1; i++)
         {
